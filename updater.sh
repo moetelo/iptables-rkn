@@ -35,7 +35,7 @@ added=0
 while IFS= read -r ip || [[ -n "$ip" ]]; do
     cmd=$(get_iptables_cmd "$ip")
 
-    if ! "$cmd" -n -t raw --check PREROUTING -s "$ip" -j DROP &>/dev/null; then
+    if ! "$cmd" -t raw --check PREROUTING -s "$ip" -j DROP &>/dev/null; then
         if [[ "$is_logging_installed" = true ]]; then
             "$cmd" -t raw -A PREROUTING -s "$ip" -j LOG --log-prefix "$BLOCK_MESSAGE"
         fi
