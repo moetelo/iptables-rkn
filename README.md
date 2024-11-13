@@ -1,23 +1,55 @@
-# Keep your webserver clean from RKN bots using iptables.
+# Block RKN bots using iptables
 
-This project uses blacklists from https://github.com/C24Be/AS_Network_List/blob/main/blacklists/blacklist.txt
+Blacklist: https://github.com/C24Be/AS_Network_List/blob/main/blacklists/blacklist.txt \
+Original instruction: [original_instruction.pdf](https://github.com/freemedia-tech/iptables-rugov-block/blob/06465fbc5fc65aa61311200e53f42a8adf0f4f72/original_instruction.pdf) \
+Original repo: [freemedia-tech/iptables-rugov-block](https://github.com/freemedia-tech/iptables-rugov-block)
 
-Pay attention! This script was tested on Ubuntu 22.04, there could be any issues on other versions or Linuxes!
+Tested on Ubuntu 22.04 and Debian 12.
 
-Original instructions from the author of this solution: [original_instruction.pdf](https://github.com/freemedia-tech/iptables-rugov-block/blob/06465fbc5fc65aa61311200e53f42a8adf0f4f72/original_instruction.pdf)
+## Usage
 
-## How to use
+With logging:
+```bash
+apt install -y iptables-persistent rsyslog \
+    && git clone https://github.com/moetelo/iptables-rkn.git \
+    && ./iptables-rkn/install.sh --log
+```
 
-1. `sudo apt-get install iptables-persistent rsyslog` \
-(rsyslog is required if you want to keep logs).
-1. Clone this repo to your server
-1. Run `sudo ./install.sh` or `sudo ./install.sh --log` to enable logging of all requests from forbidden IPs.
+Without logging:
+```bash
+apt install -y iptables-persistent \
+    && git clone https://github.com/moetelo/iptables-rkn.git \
+    && ./iptables-rkn/install.sh
+```
 
-Log file: `/var/log/rugov_blacklist/blacklist.log`
+Blocked attempts log: `/var/log/rugov-blacklist/blacklist.log` \
+Blacklist updater log: `/var/log/rugov-blacklist/blacklist-updater.log` \
+Executable: `/usr/local/bin/rugov-blacklist-update.sh`
 
-## What it does
+## Key differences with the upstream repo
 
-- adds rsyslogd rules in /etc/rsyslog.d/51-iptables-rugov.conf (only with `--log`)
-- makes directory `/var/log/rugov_blacklist/`, puts there all necessary files
-- runs the update process
-- installs cron script to /etc/cron.daily/rugov_updater
+- Fixes annoying bug that caused iptables pollution and server throughput slowdown.
+    <details>
+    <summary>Info for the original author</summary>
+
+    ```
+    iptables v1.8.9 (nf_tables): Illegal option `-n' with this command
+    ```
+
+    ```diff
+    -if ! sudo "$FMT_IPCMD" -n -t raw -C PREROUTING -s "$addr" -j DROP &>/dev/null; then
+    +if ! sudo "$FMT_IPCMD" -t raw -C PREROUTING -s "$addr" -j DROP &>/dev/null; then
+    ```
+    </details>
+
+- Follows [Filesystem Hierarchy Standard (FHS)](https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard)
+- Persists ip6tables via `ip6tables-save`
+- Removed PDF from the repo. You don't need this on the server.
+
+## Uninstall
+
+```sh
+rm -f /etc/rsyslog.d/51-iptables-rugov.conf
+rm -f /etc/cron.daily/rugov-blacklist-update
+rm -f /usr/local/bin/rugov-blacklist-update.sh
+```

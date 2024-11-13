@@ -2,12 +2,14 @@
 
 set -euo pipefail
 
+EXECUTABLE_PATH=/usr/local/bin/rugov-blacklist-update.sh
+
 if [[ "$(id -u)" != "0" ]]; then
     echo "The script is intended to run under root"
     exit 1
 fi
 
-FMTDIR=$(dirname "$(readlink -f "$0")")
+installer_dir=$(dirname "$(readlink -f "$0")")
 
 install_logs=
 if [[ -n ${1+x} && "$1" == "--log" ]];then
@@ -15,35 +17,35 @@ if [[ -n ${1+x} && "$1" == "--log" ]];then
 fi
 
 if [[ ! -d "/etc/iptables/" ]]; then
-    echo "The script is intended to be used with iptables. Are you sure all the necessary packages are installed? Run: 'sudo apt-get install iptables-persistent'"
+    echo 'The script is intended to be used with iptables. Are you sure all the necessary packages are installed? Run:'
+    echo 'sudo apt install iptables-persistent'
     exit 2
 fi
 
 if [[ "$install_logs" = true ]]; then
-    echo "Installing rsyslogd config..."
     if [[ ! -d "/etc/rsyslog.d/" ]]; then
-        echo "/etc/rsyslog.d/ not found, are you sure rsyslogd is installed? Run: 'sudo apt-get install rsyslog'"
+        echo '/etc/rsyslog.d/ not found, are you sure rsyslogd is installed? Run:'
+        echo 'sudo apt install rsyslog'
         exit 1
     fi
 
-    cp "$FMTDIR/51-iptables-rugov.conf" /etc/rsyslog.d/51-iptables-rugov.conf
+    echo "Installing rsyslogd config..."
+    cp "$installer_dir/51-iptables-rugov.conf" /etc/rsyslog.d/51-iptables-rugov.conf
 
     service rsyslog restart
 fi
 
 echo "Installing common files..."
-mkdir -p /var/log/rugov_blacklist
-chown nobody:adm /var/log/rugov_blacklist
-chmod 0755 /var/log/rugov_blacklist
+mkdir -p /var/log/rugov-blacklist
+chown nobody:adm /var/log/rugov-blacklist
+chmod 0755 /var/log/rugov-blacklist
 
-# /usr/local/bin/rugov_blacklist
-cp "$FMTDIR/updater.sh" /var/log/rugov_blacklist/updater.sh
-chmod +x /var/log/rugov_blacklist/updater.sh
-touch /var/log/rugov_blacklist/blacklist.txt
+cp "$installer_dir/updater.sh" $EXECUTABLE_PATH
+chmod +x $EXECUTABLE_PATH
 
 echo "Running initial setup process..."
-/var/log/rugov_blacklist/updater.sh
+$EXECUTABLE_PATH
 
-ln -sf /var/log/rugov_blacklist/updater.sh /etc/cron.daily/rugov_updater
+ln -sf $EXECUTABLE_PATH /etc/cron.daily/
 
 echo "Installation finished successfully!"
